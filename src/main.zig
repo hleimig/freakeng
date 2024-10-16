@@ -1,24 +1,38 @@
 const std = @import("std");
 
+const Engine = @import("engine");
+const Runtime = Engine.Runtime;
+const SceneManager = Engine.Scenes.SceneManager;
+
+const GameScene = @import("game/game.zig").GameScene;
+const PlaygroundScene = @import("game/playground.zig").PlaygroundScene;
+
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    Runtime.init(.{});
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    const scene_manager = try SceneManager.init(allocator);
+    const playground = try PlaygroundScene.init(allocator);
 
-    try bw.flush(); // don't forget to flush!
+    defer playground.deinit();
+    defer scene_manager.deinit();
+
+    const playground_scene = playground.scene();
+    const playground_scene_key = @intFromEnum(GameScene.playground);
+
+    try scene_manager.register(playground_scene_key, playground_scene);
+    scene_manager.transitionTo(playground_scene_key);
+
+    Runtime.run(.{}, run, scene_manager);
 }
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+pub fn run(scene_manager: *SceneManager, delta_time: f32) void {
+    const scene = scene_manager.getScene() orelse unreachable;
+
+    scene.handleGUI(delta_time);
+    scene.handleInput(delta_time);
+    scene.update(delta_time);
+    scene.render(delta_time);
 }
