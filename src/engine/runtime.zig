@@ -16,12 +16,14 @@ pub fn init(window_config: WindowConfig) void {
     raylib.initWindow(window_config.width, window_config.height, window_config.title);
 }
 
+pub fn deinit() void {
+    raylib.closeWindow();
+}
+
 pub fn run(window_config: WindowConfig, gameLoopFn: GameLoopFn, scene_manager: *SceneManager) void {
     raylib.setTargetFPS(window_config.target_fps);
 
     while (!raylib.windowShouldClose()) {
         gameLoopFn(scene_manager, raylib.getFrameTime());
     }
-
-    raylib.closeWindow();
 }

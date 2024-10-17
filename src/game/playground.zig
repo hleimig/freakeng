@@ -35,11 +35,7 @@ pub const PlaygroundScene = struct {
             .{ .x = 256, .y = 0, .width = 128, .height = 128 },
         };
 
-        self.sprite.* = .{
-            .texture = texture,
-            .frames = &frames,
-            .frames_per_second = 3,
-        };
+        self.sprite.* = Engine.Graphics.Sprite.init(texture, &frames, 3);
     }
 
     pub fn unload(ptr: *anyopaque) void {

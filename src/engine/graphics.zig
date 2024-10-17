@@ -1,15 +1,18 @@
+const std = @import("std");
 const raylib = @import("raylib");
 
 pub const Sprite = struct {
     texture: raylib.Texture2D,
     frames: []const raylib.Rectangle,
-    frames_per_second: f32,
+    frames_per_second: u8,
 
     current_frame: u8 = 0,
     time_since_last_frame: f32 = 0.0,
 
-    pub fn init(texture: raylib.Texture2D, frames: []const raylib.Rectangle, frames_per_second: f32) *const Sprite {
-        return &.{
+    pub fn init(texture: raylib.Texture2D, frames: []const raylib.Rectangle, frames_per_second: u8) Sprite {
+        std.debug.assert(frames.len < std.math.maxInt(u8));
+
+        return .{
             .texture = texture,
             .frames = frames,
             .frames_per_second = frames_per_second,
@@ -23,10 +26,10 @@ pub const Sprite = struct {
     pub fn update(self: *Sprite, delta_time: f32) void {
         self.time_since_last_frame += delta_time;
 
-        const frame_duration: f32 = @as(f32, 1) / self.frames_per_second;
+        const frame_duration: f32 = 1.0 / @as(f32, @floatFromInt(self.frames_per_second));
 
         if (self.time_since_last_frame > frame_duration) {
-            self.current_frame = @as(u8, (self.current_frame + 1) % self.frames.len);
+            self.current_frame = (self.current_frame + 1) % @as(u8, @intCast(self.frames.len));
             self.time_since_last_frame = 0.0;
         }
     }

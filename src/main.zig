@@ -11,20 +11,27 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
+    // Prepare runtime
     Runtime.init(.{});
+    defer Runtime.deinit();
 
+    // Load scene manager and scenes
     const scene_manager = try SceneManager.init(allocator);
-    const playground = try PlaygroundScene.init(allocator);
-
-    defer playground.deinit();
     defer scene_manager.deinit();
 
+    const playground = try PlaygroundScene.init(allocator);
+    defer playground.deinit();
+
+    // Register Scenes
     const playground_scene = playground.scene();
     const playground_scene_key = @intFromEnum(GameScene.playground);
 
     try scene_manager.register(playground_scene_key, playground_scene);
+
+    // Load initial scene
     scene_manager.transitionTo(playground_scene_key);
 
+    // Run
     Runtime.run(.{}, run, scene_manager);
 }
 
