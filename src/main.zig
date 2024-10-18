@@ -15,7 +15,8 @@ pub fn main() !void {
     const game = try Runtime.Game.init(allocator, .{});
 
     // Load scenes
-    const playground = try PlaygroundScene.init(allocator);
+    const playground = try allocator.create(PlaygroundScene);
+    playground.* = PlaygroundScene.init(allocator);
 
     // Register Scenes
     const playground_scene = playground.scene();
@@ -29,7 +30,12 @@ pub fn main() !void {
     // Run
     game.run(run);
 
+    // Deinit
     game.deinit();
+
+    // Deallocate
+    allocator.destroy(playground);
+    _ = gpa.deinit();
 }
 
 pub fn run(scene_manager: *SceneManager, delta_time: f32) void {

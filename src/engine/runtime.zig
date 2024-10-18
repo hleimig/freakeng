@@ -27,22 +27,25 @@ pub const Game = struct {
         raylib.initWindow(window_config.width, window_config.height, window_config.title);
         raylib.setTargetFPS(window_config.target_fps);
 
-        const content_manager = try allocator.create(ContentManager);
-        content_manager.* = ContentManager.init(allocator);
-
-        const scene_manager = try SceneManager.init(allocator, content_manager);
-
-        return .{
+        const game: Game = .{
             .allocator = allocator,
             .window_config = window_config,
-            .scene_manager = scene_manager,
-            .content_manager = content_manager,
+            .scene_manager = try allocator.create(SceneManager),
+            .content_manager = try allocator.create(ContentManager),
         };
+
+        game.content_manager.* = ContentManager.init(allocator);
+        game.scene_manager.* = SceneManager.init(allocator, game.content_manager);
+
+        return game;
     }
 
     pub fn deinit(self: *const Game) void {
         self.scene_manager.deinit();
         self.content_manager.deinit();
+
+        self.allocator.destroy(self.scene_manager);
+        self.allocator.destroy(self.content_manager);
 
         raylib.closeWindow();
     }

@@ -13,15 +13,12 @@ pub const SceneManager = struct {
     current: u8 = 0,
     scenes: SceneHashMap,
 
-    pub fn init(allocator: std.mem.Allocator, content_manager: *ContentManager) !*SceneManager {
-        const new = try allocator.create(SceneManager);
-        new.* = .{
+    pub fn init(allocator: std.mem.Allocator, content_manager: *ContentManager) SceneManager {
+        return .{
             .allocator = allocator,
             .content_manager = content_manager,
             .scenes = SceneHashMap.init(allocator),
         };
-
-        return new;
     }
 
     pub fn deinit(self: *SceneManager) void {

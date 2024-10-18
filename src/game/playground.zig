@@ -3,6 +3,8 @@ const raylib = @import("raylib");
 
 const Engine = @import("engine");
 const ContentManager = Engine.Content.ContentManager;
+const EntityComponentContainer = Engine.EntityComponent.EntityComponentContainer;
+const EntityComponentContainerError = Engine.EntityComponent.EntityComponentContainerError;
 
 const Scene = Engine.Scenes.Scene;
 const SceneLoadError = Engine.Scenes.SceneLoadError;
@@ -10,26 +12,28 @@ const SceneLoadError = Engine.Scenes.SceneLoadError;
 const Sprite = Engine.Graphics.Sprite;
 const SpriteManager = Engine.Graphics.SpriteManager;
 
+const Body = Engine.Physics.Body;
+
+const render_sprites = Engine.GraphicsSystems.render_sprites;
+const update_sprites = Engine.GraphicsSystems.update_sprites;
+
 pub const PlaygroundScene = struct {
     allocator: std.mem.Allocator,
 
-    sprite_manager: SpriteManager,
+    container: EntityComponentContainer,
 
-    pub fn init(allocator: std.mem.Allocator) !*PlaygroundScene {
-        const new = try allocator.create(PlaygroundScene);
-        const sprite_manager = SpriteManager.init(allocator);
-
-        new.* = .{
+    pub fn init(allocator: std.mem.Allocator) PlaygroundScene {
+        return .{
             .allocator = allocator,
-            .sprite_manager = sprite_manager,
+            .container = EntityComponentContainer.init(allocator),
         };
-
-        return new;
     }
 
     pub fn deinit(ptr: *anyopaque) void {
         const self: *PlaygroundScene = @ptrCast(@alignCast(ptr));
         PlaygroundScene.unload(self);
+
+        self.container.deinit();
     }
 
     pub fn load(ptr: *anyopaque, content_manager: *ContentManager) SceneLoadError!void {
@@ -52,22 +56,24 @@ pub const PlaygroundScene = struct {
         const sprite_idle_down = Sprite.init(texture, &idle_down_frames, 3);
         const sprite_idle_left = Sprite.init(texture_2, &idle_left_frames, 3);
 
-        self.sprite_manager.register(0, sprite_idle_down) catch |err| {
+        var sprite_manager = SpriteManager.init(self.allocator);
+
+        sprite_manager.register(0, sprite_idle_down) catch |err| {
             std.debug.print("Error registering Sprite onto SpriteManager. {}", .{err});
             return SceneLoadError.RegisteringSprite;
         };
 
-        self.sprite_manager.register(1, sprite_idle_left) catch |err| {
+        sprite_manager.register(1, sprite_idle_left) catch |err| {
             std.debug.print("Error registering Sprite onto SpriteManager. {}", .{err});
             return SceneLoadError.RegisteringSprite;
         };
+
+        const id = self.container.registerEntity() catch undefined;
+        self.container.registerSpriteManagerComponent(id, sprite_manager) catch undefined;
+        self.container.registerBodyComponent(id, Body.init(raylib.Vector2.init(100.0, 100.0))) catch undefined;
     }
 
-    pub fn unload(ptr: *anyopaque) void {
-        const self: *PlaygroundScene = @ptrCast(@alignCast(ptr));
-
-        self.sprite_manager.deinit();
-    }
+    pub fn unload(_: *anyopaque) void {}
 
     pub fn handleGUI(_: *anyopaque, _: f32) void {}
 
@@ -75,9 +81,7 @@ pub const PlaygroundScene = struct {
 
     pub fn update(ptr: *anyopaque, delta_time: f32) void {
         const self: *PlaygroundScene = @ptrCast(@alignCast(ptr));
-
-        const sprite = self.sprite_manager.getSprite();
-        sprite.?.update(delta_time);
+        update_sprites(&self.container, delta_time);
     }
 
     pub fn render(ptr: *anyopaque, delta_time: f32) void {
@@ -88,8 +92,7 @@ pub const PlaygroundScene = struct {
 
         raylib.clearBackground(raylib.Color.white);
 
-        const sprite = self.sprite_manager.getSprite();
-        sprite.?.render(delta_time, raylib.Vector2.init(100, 100));
+        render_sprites(&self.container, delta_time);
     }
 
     pub fn scene(self: *PlaygroundScene) Scene {
