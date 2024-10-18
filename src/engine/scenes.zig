@@ -1,17 +1,23 @@
 const std = @import("std");
 
+const ContentManager = @import("content.zig").ContentManager;
+
+pub const SceneLoadError = error{RegisteringSprite};
+
 const SceneHashMap = std.AutoHashMap(u8, Scene);
 
 pub const SceneManager = struct {
     allocator: std.mem.Allocator,
+    content_manager: *ContentManager,
 
     current: u8 = 0,
     scenes: SceneHashMap,
 
-    pub fn init(allocator: std.mem.Allocator) !*SceneManager {
+    pub fn init(allocator: std.mem.Allocator, content_manager: *ContentManager) !*SceneManager {
         const new = try allocator.create(SceneManager);
         new.* = .{
             .allocator = allocator,
+            .content_manager = content_manager,
             .scenes = SceneHashMap.init(allocator),
         };
 
@@ -19,6 +25,11 @@ pub const SceneManager = struct {
     }
 
     pub fn deinit(self: *SceneManager) void {
+        var it = self.scenes.valueIterator();
+        while (it.next()) |scene| {
+            scene.deinit();
+        }
+
         self.scenes.deinit();
     }
 
@@ -30,7 +41,9 @@ pub const SceneManager = struct {
 
     pub fn transitionTo(self: *SceneManager, key: u8) void {
         self.current = key;
-        self.getScene().?.load();
+        self.getScene().?.load(self.content_manager) catch |err| {
+            std.debug.panic("Error loading a scene. Error: {}", .{err});
+        };
     }
 
     pub fn getScene(self: *SceneManager) ?*Scene {
@@ -41,15 +54,21 @@ pub const SceneManager = struct {
 pub const Scene = struct {
     ptr: *anyopaque,
 
-    loadFn: *const fn (ptr: *anyopaque) void,
+    deinitFn: *const fn (ptr: *anyopaque) void,
+
+    loadFn: *const fn (ptr: *anyopaque, content_manager: *ContentManager) SceneLoadError!void,
     unloadFn: *const fn (ptr: *anyopaque) void,
     handleGUIFn: *const fn (ptr: *anyopaque, delta_time: f32) void,
     handleInputFn: *const fn (ptr: *anyopaque, delta_time: f32) void,
     updateFn: *const fn (ptr: *anyopaque, delta_time: f32) void,
     renderFn: *const fn (ptr: *anyopaque, delta_time: f32) void,
 
-    pub fn load(self: Scene) void {
-        self.loadFn(self.ptr);
+    pub fn deinit(self: Scene) void {
+        self.deinitFn(self.ptr);
+    }
+
+    pub fn load(self: Scene, content_manager: *ContentManager) !void {
+        try self.loadFn(self.ptr, content_manager);
     }
 
     pub fn unload(self: Scene) void {

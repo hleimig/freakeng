@@ -2,46 +2,71 @@ const std = @import("std");
 const raylib = @import("raylib");
 
 const Engine = @import("engine");
+const ContentManager = Engine.Content.ContentManager;
+
 const Scene = Engine.Scenes.Scene;
+const SceneLoadError = Engine.Scenes.SceneLoadError;
+
+const Sprite = Engine.Graphics.Sprite;
+const SpriteManager = Engine.Graphics.SpriteManager;
 
 pub const PlaygroundScene = struct {
     allocator: std.mem.Allocator,
 
-    sprite: *Engine.Graphics.Sprite,
+    sprite_manager: SpriteManager,
 
     pub fn init(allocator: std.mem.Allocator) !*PlaygroundScene {
         const new = try allocator.create(PlaygroundScene);
-        const sprite = try allocator.create(Engine.Graphics.Sprite);
+        const sprite_manager = SpriteManager.init(allocator);
 
         new.* = .{
             .allocator = allocator,
-            .sprite = sprite,
+            .sprite_manager = sprite_manager,
         };
 
         return new;
     }
 
-    pub fn deinit(self: *PlaygroundScene) void {
+    pub fn deinit(ptr: *anyopaque) void {
+        const self: *PlaygroundScene = @ptrCast(@alignCast(ptr));
         PlaygroundScene.unload(self);
     }
 
-    pub fn load(ptr: *anyopaque) void {
+    pub fn load(ptr: *anyopaque, content_manager: *ContentManager) SceneLoadError!void {
         const self: *PlaygroundScene = @ptrCast(@alignCast(ptr));
 
-        const texture = raylib.Texture.init("content/playground/actors/child_1_idle.png");
-        const frames: [3]raylib.Rectangle = .{
+        const texture = content_manager.loadTexture2D("content/playground/actors/child_1_idle.png");
+        const texture_2 = content_manager.loadTexture2D("content/playground/actors/child_1_idle.png");
+        const idle_down_frames: [3]raylib.Rectangle = .{
             .{ .x = 0, .y = 0, .width = 128, .height = 128 },
             .{ .x = 128, .y = 0, .width = 128, .height = 128 },
             .{ .x = 256, .y = 0, .width = 128, .height = 128 },
         };
 
-        self.sprite.* = Engine.Graphics.Sprite.init(texture, &frames, 3);
+        const idle_left_frames: [3]raylib.Rectangle = .{
+            .{ .x = 0, .y = 128, .width = 128, .height = 128 },
+            .{ .x = 128, .y = 128, .width = 128, .height = 128 },
+            .{ .x = 256, .y = 128, .width = 128, .height = 128 },
+        };
+
+        const sprite_idle_down = Sprite.init(texture, &idle_down_frames, 3);
+        const sprite_idle_left = Sprite.init(texture_2, &idle_left_frames, 3);
+
+        self.sprite_manager.register(0, sprite_idle_down) catch |err| {
+            std.debug.print("Error registering Sprite onto SpriteManager. {}", .{err});
+            return SceneLoadError.RegisteringSprite;
+        };
+
+        self.sprite_manager.register(1, sprite_idle_left) catch |err| {
+            std.debug.print("Error registering Sprite onto SpriteManager. {}", .{err});
+            return SceneLoadError.RegisteringSprite;
+        };
     }
 
     pub fn unload(ptr: *anyopaque) void {
         const self: *PlaygroundScene = @ptrCast(@alignCast(ptr));
 
-        self.sprite.deinit();
+        self.sprite_manager.deinit();
     }
 
     pub fn handleGUI(_: *anyopaque, _: f32) void {}
@@ -51,7 +76,8 @@ pub const PlaygroundScene = struct {
     pub fn update(ptr: *anyopaque, delta_time: f32) void {
         const self: *PlaygroundScene = @ptrCast(@alignCast(ptr));
 
-        self.sprite.update(delta_time);
+        const sprite = self.sprite_manager.getSprite();
+        sprite.?.update(delta_time);
     }
 
     pub fn render(ptr: *anyopaque, delta_time: f32) void {
@@ -61,12 +87,15 @@ pub const PlaygroundScene = struct {
         defer raylib.endDrawing();
 
         raylib.clearBackground(raylib.Color.white);
-        self.sprite.render(delta_time, raylib.Vector2.init(100, 100));
+
+        const sprite = self.sprite_manager.getSprite();
+        sprite.?.render(delta_time, raylib.Vector2.init(100, 100));
     }
 
     pub fn scene(self: *PlaygroundScene) Scene {
         return .{
             .ptr = self,
+            .deinitFn = PlaygroundScene.deinit,
             .loadFn = PlaygroundScene.load,
             .unloadFn = PlaygroundScene.unload,
             .handleGUIFn = PlaygroundScene.handleGUI,

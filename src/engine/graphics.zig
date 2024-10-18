@@ -1,15 +1,54 @@
 const std = @import("std");
 const raylib = @import("raylib");
 
+const SpriteHashMap = std.AutoHashMap(u8, Sprite);
+
+pub const SpriteManager = struct {
+    allocator: std.mem.Allocator,
+
+    current: u8 = 0,
+    sprites: SpriteHashMap,
+
+    pub fn init(allocator: std.mem.Allocator) SpriteManager {
+        return .{
+            .allocator = allocator,
+            .sprites = SpriteHashMap.init(allocator),
+        };
+    }
+
+    pub fn deinit(self: *SpriteManager) void {
+        var it = self.sprites.valueIterator();
+        while (it.next()) |sprite| {
+            sprite.deinit();
+        }
+
+        self.sprites.deinit();
+    }
+
+    pub fn register(self: *SpriteManager, key: u8, scene: Sprite) !void {
+        if (!self.sprites.contains(key)) {
+            try self.sprites.put(key, scene);
+        }
+    }
+
+    pub fn transitionTo(self: *SpriteManager, key: u8) void {
+        self.current = key;
+    }
+
+    pub fn getSprite(self: *SpriteManager) ?*Sprite {
+        return self.sprites.getPtr(self.current);
+    }
+};
+
 pub const Sprite = struct {
-    texture: raylib.Texture2D,
+    texture: *raylib.Texture2D,
     frames: []const raylib.Rectangle,
     frames_per_second: u8,
 
     current_frame: u8 = 0,
     time_since_last_frame: f32 = 0.0,
 
-    pub fn init(texture: raylib.Texture2D, frames: []const raylib.Rectangle, frames_per_second: u8) Sprite {
+    pub fn init(texture: *raylib.Texture2D, frames: []const raylib.Rectangle, frames_per_second: u8) Sprite {
         std.debug.assert(frames.len < std.math.maxInt(u8));
 
         return .{
@@ -19,9 +58,7 @@ pub const Sprite = struct {
         };
     }
 
-    pub fn deinit(self: *Sprite) void {
-        raylib.unloadTexture(self.texture);
-    }
+    pub fn deinit(_: *Sprite) void {}
 
     pub fn update(self: *Sprite, delta_time: f32) void {
         self.time_since_last_frame += delta_time;
@@ -43,6 +80,6 @@ pub const Sprite = struct {
             .height = src_frame.height,
         };
 
-        raylib.drawTexturePro(self.texture, src_frame, dest_frame, raylib.Vector2.zero(), 0.0, raylib.Color.white);
+        raylib.drawTexturePro(self.texture.*, src_frame, dest_frame, raylib.Vector2.zero(), 0.0, raylib.Color.white);
     }
 };
