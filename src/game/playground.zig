@@ -39,31 +39,21 @@ pub const PlaygroundScene = struct {
     pub fn load(ptr: *anyopaque, content_manager: *ContentManager) SceneLoadError!void {
         const self: *PlaygroundScene = @ptrCast(@alignCast(ptr));
 
-        const texture = content_manager.loadTexture2D("content/playground/actors/child_1_idle.png");
-        const texture_2 = content_manager.loadTexture2D("content/playground/actors/child_1_idle.png");
-        const idle_down_frames: [3]raylib.Rectangle = .{
-            .{ .x = 0, .y = 0, .width = 128, .height = 128 },
-            .{ .x = 128, .y = 0, .width = 128, .height = 128 },
-            .{ .x = 256, .y = 0, .width = 128, .height = 128 },
+        const texture = content_manager.loadTexture2D("content/playground/sprites/actors/character_set.png");
+        const idle_down_frames: [6]raylib.Rectangle = .{
+            .{ .x = 192 * 0, .y = 0, .width = 192, .height = 192 },
+            .{ .x = 192 * 1, .y = 0, .width = 192, .height = 192 },
+            .{ .x = 192 * 2, .y = 0, .width = 192, .height = 192 },
+            .{ .x = 192 * 3, .y = 0, .width = 192, .height = 192 },
+            .{ .x = 192 * 4, .y = 0, .width = 192, .height = 192 },
+            .{ .x = 192 * 5, .y = 0, .width = 192, .height = 192 },
         };
 
-        const idle_left_frames: [3]raylib.Rectangle = .{
-            .{ .x = 0, .y = 128, .width = 128, .height = 128 },
-            .{ .x = 128, .y = 128, .width = 128, .height = 128 },
-            .{ .x = 256, .y = 128, .width = 128, .height = 128 },
-        };
-
-        const sprite_idle_down = Sprite.init(texture, &idle_down_frames, 3);
-        const sprite_idle_left = Sprite.init(texture_2, &idle_left_frames, 3);
+        const sprite_idle_down = Sprite.init(texture, &idle_down_frames, 9);
 
         var sprite_manager = SpriteManager.init(self.allocator);
 
         sprite_manager.register(0, sprite_idle_down) catch |err| {
-            std.debug.print("Error registering Sprite onto SpriteManager. {}", .{err});
-            return SceneLoadError.RegisteringSprite;
-        };
-
-        sprite_manager.register(1, sprite_idle_left) catch |err| {
             std.debug.print("Error registering Sprite onto SpriteManager. {}", .{err});
             return SceneLoadError.RegisteringSprite;
         };
