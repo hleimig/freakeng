@@ -20,8 +20,8 @@ pub const Game = struct {
 
     window_config: WindowConfig,
 
-    scene_manager: *SceneManager,
     content_manager: *ContentManager,
+    scene_manager: *SceneManager,
 
     pub fn init(allocator: std.mem.Allocator, window_config: WindowConfig) !Game {
         raylib.initWindow(window_config.width, window_config.height, window_config.title);
@@ -41,11 +41,11 @@ pub const Game = struct {
     }
 
     pub fn deinit(self: *const Game) void {
-        self.scene_manager.deinit();
         self.content_manager.deinit();
+        self.scene_manager.deinit();
 
-        self.allocator.destroy(self.scene_manager);
         self.allocator.destroy(self.content_manager);
+        self.allocator.destroy(self.scene_manager);
 
         raylib.closeWindow();
     }

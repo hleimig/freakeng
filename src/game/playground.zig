@@ -14,8 +14,8 @@ const SpriteManager = Engine.Graphics.SpriteManager;
 
 const Body = Engine.Physics.Body;
 
-const render_sprites = Engine.GraphicsSystems.render_sprites;
-const update_sprites = Engine.GraphicsSystems.update_sprites;
+const render_sprites = Engine.Graphics.render_sprites;
+const update_sprites = Engine.Graphics.update_sprites;
 
 pub const PlaygroundScene = struct {
     allocator: std.mem.Allocator,

@@ -1,7 +1,7 @@
 const std = @import("std");
 const raylib = @import("raylib");
 
-const EntityComponentContainer = @import("entity_component_container.zig").EntityComponentContainer;
+const EntityComponentContainer = @import("../entity_component_container.zig").EntityComponentContainer;
 
 pub fn update_sprites(container: *EntityComponentContainer, delta_time: f32) void {
     for (0..container.getEntityCount()) |entity| {
